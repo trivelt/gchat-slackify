@@ -152,6 +152,9 @@
     // from GChat's wavy blue line into Slack's straight red line with the label at the right.
     unreadLine:  '[data-slackify="unread-line"]',
     unreadLabel: '[data-slackify="unread-label"]',
+    // Sidebar meeting/calendar conversation row. The Home feed has data-group-type="10"; sidebar
+    // rows do not, so tagger.js stamps this owned attribute after detecting meeting affordances.
+    meetingConv: '[role="listitem"][data-sf-meeting]',
     // Sidebar conversation row that tagger.js has classified as unread. Kept separate from
     // data-slackify because rows may already use data-slackify="active".
     unreadConv:  '[role="listitem"][data-sf-unread]',
@@ -199,8 +202,8 @@
     { id: 'unreadbold',   group: 'nav',      label: 'Bold unread',             default: true,  desc: 'Embolden unread conversations' },
     { id: 'spacehash',    group: 'nav',      label: '“#” on space names',       default: true,  desc: 'Prefix space/channel names with a “#” in the sidebar, like Slack channels' },
     { id: 'unreadswitch', group: 'nav',      label: 'Visible “Unread” switch',  default: true,  desc: 'Give the Home “Unread” filter a clear themed color when it is ON (GChat’s default ON state is nearly invisible)' },
-    { id: 'hidemeetings', group: 'nav',      label: 'Hide meetings from Home', default: false, desc: 'Remove meeting/calendar conversations from the Home feed. They stay in the sidebar “Meetings” section.' },
-    { id: 'dimmeetings',  group: 'nav',      label: 'Dim meetings in Home',    default: false, desc: 'Grey out meeting conversations in the Home feed instead of hiding them (ignored when “Hide meetings from Home” is on).' },
+    { id: 'hidemeetings', group: 'nav',      label: 'Hide meeting conversations', default: false, desc: 'Remove meeting/calendar conversations from Home and Direct messages. They stay in the sidebar “Meetings” section.' },
+    { id: 'dimmeetings',  group: 'nav',      label: 'Dim meeting conversations',  default: false, desc: 'Grey out meeting conversations in Home and Direct messages instead of hiding them (ignored when “Hide meeting conversations” is on).' },
     // The one deliberate exception to "purely cosmetic": ADDS shortcuts (never overrides Chat's own
     // — check Chat's list via Shift+? before adding a combo), handled by src/shortcuts.js, which
     // no-ops entirely unless this feature attribute is on.

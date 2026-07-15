@@ -391,15 +391,15 @@
     }));
     parts.push(mk('codestyle', SEL.codeBlock, ' *', { 'color': 'var(--sf-content-text)' }));
 
-    // ===== MEETINGS in the Home feed (opt-in declutter) =====
-    // SEL.meetingRow keys off data-group-type="10", which exists ONLY on Home-feed rows — so these
-    // rules declutter the Home feed without touching the sidebar "Meetings" section (meetings stay
-    // findable there). Pure attribute selector: no :has() in the sheet, no tagger, self-heals on
-    // Wiz re-renders. Default-OFF features (config.js), so nothing is hidden without consent.
-    parts.push(mk('hidemeetings', SEL.meetingRow, '', { display: 'none' }));
+    // ===== MEETINGS in Home + Direct messages (opt-in declutter) =====
+    // Home rows expose data-group-type="10"; sidebar DM meeting rows do not, so tagger.js marks
+    // those with TAG.meetingConv after detecting their calendar/meeting affordance. The dedicated
+    // sidebar "Meetings" section is not under dmList and is intentionally left visible.
+    const meetingRows = SEL.meetingRow.concat([`${TAG.rail} ${TAG.meetingConv}`]);
+    parts.push(mk('hidemeetings', meetingRows, '', { display: 'none' }));
     // Dim = de-emphasize in place. If both toggles are on, hidemeetings (display:none) wins outright.
-    parts.push(mk('dimmeetings', SEL.meetingRow, '', { opacity: '0.45', filter: 'grayscale(0.6)' }));
-    parts.push(mk('dimmeetings', SEL.meetingRow, ':hover', { opacity: '1', filter: 'none' }));
+    parts.push(mk('dimmeetings', meetingRows, '', { opacity: '0.45', filter: 'grayscale(0.6)' }));
+    parts.push(mk('dimmeetings', meetingRows, ':hover', { opacity: '1', filter: 'none' }));
 
     return parts.join('\n');
   }

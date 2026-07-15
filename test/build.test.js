@@ -137,6 +137,11 @@ test('sidebar unread row tag is wired separately from data-slackify active state
   assert.ok(css.includes('[data-sf-unread]'), 'generated CSS should use the tagger-owned unread row attr');
 });
 
+test('sidebar meeting row tag extends hide/dim meetings beyond Home', () => {
+  assert.ok(C.TAGS.meetingConv && C.TAGS.meetingConv.includes('data-sf-meeting'), 'meeting sidebar row tag missing');
+  assert.ok(css.includes('[data-sf-meeting]'), 'generated CSS should target tagger-owned sidebar meeting rows');
+});
+
 test('selfslack timestamp/grouping is wired: self-meta tag, durable timestamp hook, generated rules', () => {
   // config: own-message timestamp header (self-meta) + the durable Google hook that tagger keys off
   assert.ok(C.TAGS.selfMeta && C.TAGS.selfMeta.includes('self-meta'), 'selfMeta tag missing');

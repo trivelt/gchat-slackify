@@ -78,6 +78,12 @@ test('tagger classifies sidebar unread rows with an owned row attribute', () => 
   assert.match(taggerSrc, /hasNativeBoldText/);
 });
 
+test('tagger classifies sidebar meeting rows with an owned row attribute', () => {
+  assert.match(taggerSrc, /scanSidebarMeetingRows/);
+  assert.match(taggerSrc, /data-sf-meeting/);
+  assert.match(taggerSrc, /rowTitleLooksLikeMeeting/);
+});
+
 test('MutationObserver callback is O(1) — flag + schedule, no inline DOM work', () => {
   const start = taggerSrc.indexOf('new MutationObserver');
   const end = taggerSrc.indexOf('.observe(', start);
@@ -129,9 +135,11 @@ test('controls MutationObserver callback is O(1) — flag + schedule, no inline 
   assert.ok(/schedule\(/.test(region), 'observer should schedule a throttled idle pass');
 });
 
-test('controls is fail-safe: bails when the Unread anchor is absent', () => {
-  // findAnchorCell returns null off-Home; sync() must return without inserting
-  assert.match(controlsSrc, /if \(!cell\) return/);
+test('controls is fail-safe: inserts only when anchors are found', () => {
+  assert.match(controlsSrc, /findHomeAnchorCell/);
+  assert.match(controlsSrc, /findDmAnchor/);
+  assert.match(controlsSrc, /if \(cell\) insertControl\('home'/);
+  assert.match(controlsSrc, /if \(anchor\) insertControl\('sidebar'/);
 });
 
 test('controls writes prefs to chrome.storage (drives apply.js, no new mechanism)', () => {

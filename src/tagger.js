@@ -121,6 +121,63 @@
     for (const row of unread) row.setAttribute('data-sf-unread', '');
   }
 
+  // ---- meeting/calendar conversations in the Direct messages list ----
+  // Home feed meeting rows expose data-group-type="10"; Direct-message sidebar rows do not. Meeting
+  // conversations do, however, carry a calendar/meeting affordance in current Chat builds, and their
+  // row titles commonly include the event date ("Quick Sync - Jul 15"). Tag only rows under the DM
+  // list so the dedicated sidebar "Meetings" section remains visible even when hidden from DMs.
+  const meetingAttrSel = [
+    '[data-group-type="10"]',
+    '[data-meeting]',
+    '[data-calendar]',
+    '[data-event]',
+    '[aria-label*="meeting" i]',
+    '[aria-label*="calendar" i]',
+    '[aria-label*="event" i]',
+    '[title*="meeting" i]',
+    '[title*="calendar" i]',
+    '[title*="event" i]',
+    '[data-tooltip*="meeting" i]',
+    '[data-tooltip*="calendar" i]',
+    '[data-tooltip*="event" i]',
+  ].join(',');
+  const monthDate = /\s[-–—]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}\b/i;
+  function attrSaysMeeting(el) {
+    if (!el || !el.attributes) return false;
+    for (const a of el.attributes) {
+      const n = a.name.toLowerCase();
+      const v = (a.value || '').trim();
+      const vl = v.toLowerCase();
+      if (!v || /^(0|false|none)$/i.test(v)) continue;
+      if ((n.includes('meeting') || n.includes('calendar') || n.includes('event')) && !/prevent|listener/.test(n)) return true;
+      if ((n === 'aria-label' || n === 'title' || n === 'data-tooltip') && /\b(meeting|calendar|event)\b/i.test(v) && !/\bhide meetings?\b/i.test(vl)) return true;
+    }
+    return false;
+  }
+  function rowTitleLooksLikeMeeting(row) {
+    const t = (row.textContent || '').replace(/\s+/g, ' ').trim();
+    return monthDate.test(t);
+  }
+  function scanSidebarMeetingRows(rail) {
+    if (!rail) return;
+    const list = C.firstMatchEl('dmList', rail);
+    if (!list) return;
+    const rows = Array.from(list.querySelectorAll(C.sel('convRow')));
+    if (!rows.length) return;
+    for (const row of rows) row.removeAttribute('data-sf-meeting');
+    const meetings = [];
+    for (const row of rows) {
+      let isMeeting = attrSaysMeeting(row) || rowTitleLooksLikeMeeting(row);
+      if (!isMeeting) {
+        for (const el of row.querySelectorAll(meetingAttrSel)) {
+          if (attrSaysMeeting(el)) { isMeeting = true; break; }
+        }
+      }
+      if (isMeeting) meetings.push(row);
+    }
+    for (const row of meetings) row.setAttribute('data-sf-meeting', '');
+  }
+
   // ---- conversation header title (Lato/weight for ALL conversations; "#" prefix for spaces) ----
   // The header title sits in a button[aria-haspopup="menu"] near the top, right of the rail (it's
   // NOT inside [role="main"], so the pane typography rule never reaches it). The title is the
@@ -597,6 +654,7 @@
       const pane = C.firstMatchEl('conversationPane');
       const rail = document.querySelector('[data-slackify="rail"]');
       try { tagActiveRow(pane, rail); } catch (e) {}
+      try { scanSidebarMeetingRows(rail); } catch (e) {}
       try { scanSidebarUnreadRows(rail); } catch (e) {}
       try { tagSpaceHeader(pane); } catch (e) {}
       try { scanAvatars(rail); } catch (e) {}

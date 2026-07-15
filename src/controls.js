@@ -1,23 +1,22 @@
 // @ts-check
 /*
- * controls.js — injects a self-owned "Hide meetings" switch into Google Chat's Home filter row,
- * right next to Chat's own "Unread" toggle. Clicking it flips prefs.features.hidemeetings in
- * chrome.storage.sync — exactly what the popup writes — so apply.js's existing storage listener
- * reacts and the generated CSS hides/shows meeting rows. No new permissions (storage only), no
- * network. The popup toggle keeps working unchanged; this is just a second, in-context entry point.
+ * controls.js — injects self-owned "Hide meetings" switches into Google Chat's Home filter row and
+ * the Direct messages sidebar header. Both flip prefs.features.hidemeetings in chrome.storage.sync
+ * — exactly what the popup writes — so apply.js's existing storage listener reacts and the generated
+ * CSS hides/shows meeting rows. No new permissions (storage only), no network. The popup toggle
+ * keeps working unchanged; these are just in-context entry points.
  *
  * PERFORMANCE / SAFETY CONTRACT (CLAUDE.md — "host app must never break", lightweight doctrine):
- *   - Self-owned node only. We NEVER mutate Google's internals — we insert ONE sibling cell after
- *     Chat's Unread cell, and remove only our own node.
+ *   - Self-owned nodes only. We NEVER mutate Google's internals — we insert our controls beside
+ *     Chat's own header/filter nodes, and remove only our own nodes.
  *   - The MutationObserver callback is O(1): set a dirty flag + schedule. All real work runs in
  *     requestIdleCallback, throttled to one pass per idle slot.
- *   - Steady-state cost is a single `isConnected` check: when our control is already in place the
- *     idle pass early-returns with NO query and NO layout/style read.
- *   - The anchor lookup (the only layout reads) runs ONLY when the control is missing — i.e. first
- *     paint and view navigation, never while the user sits on Home. On non-Home views there is no
- *     visible Unread switch, so it bails after a cheap query before any getComputedStyle.
- *   - Everything is try/caught. If the Unread anchor can't be found (other view, non-English UI,
- *     Google reshuffle) we simply don't inject — the host is untouched. Fail-safe by construction.
+ *   - Steady-state cost is only `isConnected` checks: when controls are already in place the idle
+ *     pass does not search for their anchors.
+ *   - Anchor lookups (the only layout reads) run ONLY when a control is missing — i.e. first paint
+ *     and view/sidebar navigation, not while both controls are already mounted.
+ *   - Everything is try/caught. If an anchor can't be found (other view, non-English UI, Google
+ *     reshuffle) we simply don't inject that control — the host is untouched. Fail-safe by construction.
  */
 ;(function () {
   const C = globalThis.SLACKIFY_CONFIG;
@@ -66,20 +65,60 @@
     // color; the track is a theme-agnostic translucent grey; the "on" accent is Google blue.
     st.textContent =
       `[data-slackify="${TAG}"]{display:inline-flex;align-items:center;gap:7px;margin:0 10px;font:inherit;color:inherit;white-space:nowrap;-webkit-user-select:none;user-select:none;}` +
+      `[data-slackify="${TAG}"][data-sf-place="sidebar"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:42px;min-width:42px;height:32px;flex:0 0 42px;margin:0 14px 0 0!important;gap:0;position:relative;z-index:2;background-color:transparent!important;opacity:1!important;visibility:visible!important;}` +
       `[data-slackify="${TAG}"] .sf-mt-label{font-size:13px;opacity:.92;}` +
-      `[data-slackify="${TAG}"] .sf-mt-sw{position:relative;width:34px;height:18px;border-radius:9px;border:none;padding:0;margin:0;cursor:pointer;background:rgba(128,128,128,.45);transition:background .15s ease;flex:0 0 auto;}` +
+      `[data-slackify="${TAG}"][data-sf-place="sidebar"] .sf-mt-label{display:none!important;}` +
+      `[data-slackify="${TAG}"] .sf-mt-sw{display:block!important;position:relative;width:34px;height:18px;border-radius:9px;border:none;padding:0;margin:0;cursor:pointer;background-color:rgba(128,128,128,.45)!important;transition:background-color .15s ease;flex:0 0 auto;appearance:none;-webkit-appearance:none;opacity:1!important;visibility:visible!important;}` +
       `[data-slackify="${TAG}"] .sf-mt-sw:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}` +
-      `[data-slackify="${TAG}"] .sf-mt-sw[aria-checked="true"]{background:#1a73e8;}` +
-      `[data-slackify="${TAG}"] .sf-mt-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.3);}` +
-      `[data-slackify="${TAG}"] .sf-mt-sw[aria-checked="true"] .sf-mt-knob{transform:translateX(16px);}`;
+      `[data-slackify="${TAG}"] .sf-mt-sw[aria-checked="true"]{background-color:#1a73e8!important;}` +
+      `[data-slackify="${TAG}"] .sf-mt-knob{display:block!important;position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background-color:#fff!important;transition:transform .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.3);pointer-events:none;opacity:1!important;visibility:visible!important;}` +
+      `[data-slackify="${TAG}"] .sf-mt-sw[aria-checked="true"] .sf-mt-knob{transform:translateX(16px);}` +
+      `[data-slackify="meetings-tooltip"]{position:fixed;z-index:2147483647;max-width:260px;padding:6px 8px;border-radius:4px;background-color:#1f1f1f!important;color:#fff!important;font:500 12px/1.35 var(--sf-font,Arial,sans-serif);box-shadow:0 4px 14px rgba(0,0,0,.24);pointer-events:none;opacity:0;transform:translate(-50%,4px);transition:opacity .08s ease,transform .08s ease;white-space:normal;}` +
+      `[data-slackify="meetings-tooltip"][data-sf-show]{opacity:1;transform:translate(-50%,0);}`;
+    st.textContent +=
+      `html[data-sf-on][data-sf-feat-sidebar] [data-slackify="rail"] [data-slackify="${TAG}"][data-sf-place="sidebar"] button.sf-mt-sw{background-color:rgba(209,210,211,.35)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)!important;}` +
+      `html[data-sf-on][data-sf-feat-sidebar] [data-slackify="rail"] [data-slackify="${TAG}"][data-sf-place="sidebar"] button.sf-mt-sw[aria-checked="true"]{background-color:#1a73e8!important;box-shadow:none!important;}` +
+      `html[data-sf-on][data-sf-feat-sidebar] [data-slackify="rail"] [data-slackify="${TAG}"][data-sf-place="sidebar"] .sf-mt-knob{background-color:#fff!important;}`;
     (document.head || document.documentElement).appendChild(st);
   }
 
-  // ---- build the control once; the same node is re-inserted across re-renders ----
-  let el = null, swBtn = null;
-  function build() {
+  // ---- build controls once; the same nodes are re-inserted across re-renders ----
+  /** @type {Record<string, { el: HTMLElement, btn: HTMLButtonElement }>} */
+  const controls = {};
+  const helpText = {
+    home: 'Hide meeting/calendar conversations from Home and Direct messages.',
+    sidebar: 'Hide meeting/calendar conversations from Direct messages.',
+  };
+  /** @type {HTMLElement|null} */
+  let tooltip = null;
+  function getTooltip() {
+    if (tooltip && tooltip.isConnected) return tooltip;
+    tooltip = document.createElement('div');
+    tooltip.id = 'slackify-meetings-tooltip';
+    tooltip.setAttribute('data-slackify', 'meetings-tooltip');
+    tooltip.setAttribute('role', 'tooltip');
+    (document.body || document.documentElement).appendChild(tooltip);
+    return tooltip;
+  }
+  function showTooltip(place, anchor) {
+    injectStyle();
+    const tip = getTooltip();
+    tip.textContent = helpText[place] || helpText.home;
+    const r = anchor.getBoundingClientRect();
+    const top = Math.min(window.innerHeight - 8, r.bottom + 8);
+    const left = Math.max(136, Math.min(window.innerWidth - 136, r.left + r.width / 2));
+    tip.style.top = `${top}px`;
+    tip.style.left = `${left}px`;
+    tip.setAttribute('data-sf-show', '');
+  }
+  function hideTooltip() {
+    if (tooltip) tooltip.removeAttribute('data-sf-show');
+  }
+  function getControl(place) {
+    if (controls[place]) return controls[place];
     const wrap = document.createElement('div');
     wrap.setAttribute('data-slackify', TAG);
+    wrap.setAttribute('data-sf-place', place);
     const label = document.createElement('span');
     label.className = 'sf-mt-label';
     label.textContent = 'Hide meetings';
@@ -87,7 +126,8 @@
     btn.type = 'button';
     btn.className = 'sf-mt-sw';
     btn.setAttribute('role', 'switch');
-    btn.setAttribute('aria-label', 'Hide meetings from Home');
+    btn.setAttribute('aria-label', place === 'sidebar' ? 'Hide meetings from Direct messages' : 'Hide meetings from Home');
+    btn.setAttribute('aria-describedby', 'slackify-meetings-tooltip');
     btn.setAttribute('aria-checked', 'false');
     const knob = document.createElement('span');
     knob.className = 'sf-mt-knob';
@@ -99,19 +139,27 @@
       btn.setAttribute('aria-checked', String(on));
       writeFeat(on);
     });
+    wrap.addEventListener('mouseenter', () => showTooltip(place, wrap));
+    wrap.addEventListener('mouseleave', hideTooltip);
+    wrap.addEventListener('focusin', () => showTooltip(place, wrap));
+    wrap.addEventListener('focusout', hideTooltip);
     wrap.appendChild(label);
     wrap.appendChild(btn);
-    el = wrap;
-    swBtn = btn;
+    controls[place] = { el: wrap, btn };
+    return controls[place];
   }
   function reflect() {
-    if (swBtn) swBtn.setAttribute('aria-checked', String(!!(prefs.features && prefs.features[FEAT])));
+    const on = String(!!(prefs.features && prefs.features[FEAT]));
+    for (const c of Object.values(controls)) c.btn.setAttribute('aria-checked', on);
+  }
+  function removeControls() {
+    for (const c of Object.values(controls)) if (c.el.isConnected) c.el.remove();
   }
 
   // The left sidebar ALSO has per-section unread-filter switches ("Direct messages", "Spaces"),
   // whose aria-labels also match /unread/. We must anchor to the HOME HEADER's Unread filter only,
   // so we exclude anything inside the sidebar. Bonus: this naturally limits the control to the Home
-  // view (no Home filter row elsewhere → no injection), which is exactly where hiding meetings applies.
+  // view (no Home filter row elsewhere → no Home-control injection).
   function sidebarRoot() {
     const dm = C.firstMatchEl('dmList') || C.firstMatchEl('convRow');
     if (!dm) return null;
@@ -140,7 +188,7 @@
     }
     return null;
   }
-  function findAnchorCell() {
+  function findHomeAnchorCell() {
     const sw = findUnreadSwitch();
     if (!sw) return null;                                    // not on Home → bail before any getComputedStyle
     let row = null, n = sw;
@@ -154,17 +202,81 @@
     return Array.prototype.find.call(row.children, (c) => c.contains(sw)) || null;
   }
 
+  function isVisible(node) {
+    const el = /** @type {HTMLElement} */ (node);
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && el.offsetParent !== null;
+  }
+  function directChildOf(parent, node) {
+    let n = node;
+    while (n && n.parentElement && n.parentElement !== parent) n = n.parentElement;
+    return n && n.parentElement === parent ? n : null;
+  }
+  function findDmUnreadSwitch(rail, list) {
+    const listTop = list.getBoundingClientRect().top;
+    let best = null, bestDist = Infinity;
+    for (const s of (C.SELECTORS.unreadToggle || [])) {
+      try {
+        for (const node of rail.querySelectorAll(s)) {
+          if (!isVisible(node)) continue;
+          const r = node.getBoundingClientRect();
+          if (r.top > listTop) continue;
+          const dist = listTop - r.bottom;
+          if (dist >= 0 && dist < bestDist) { best = node; bestDist = dist; }
+        }
+      } catch (e) {}
+    }
+    return best;
+  }
+  function findDmHeaderRow(anchor, rail) {
+    let n = anchor;
+    const railRect = rail.getBoundingClientRect();
+    for (let i = 0; i < 6 && n.parentElement; i++) {
+      const p = n.parentElement;
+      const r = p.getBoundingClientRect();
+      if (r.width >= 120 && r.height > 0 && r.height <= 64 && r.left >= railRect.left - 2 && r.right <= railRect.right + 80) {
+        const cs = getComputedStyle(p);
+        if (cs.display.indexOf('flex') !== -1 || p.children.length >= 2) return p;
+      }
+      n = p;
+    }
+    return anchor.parentElement || null;
+  }
+  function findDmAnchor() {
+    const rail = sidebarRoot();
+    if (!rail) return null;
+    const list = C.firstMatchEl('dmList', rail);
+    if (!list || !isVisible(list)) return null;
+    const unreadSwitch = findDmUnreadSwitch(rail, list);
+    if (unreadSwitch) {
+      const row = findDmHeaderRow(unreadSwitch, rail);
+      if (row) {
+        const child = directChildOf(row, unreadSwitch);
+        return { type: 'before', node: child || unreadSwitch };
+      }
+    }
+    return null;
+  }
+
+  function insertControl(place, anchor) {
+    injectStyle();
+    const c = getControl(place);
+    reflect();
+    if (anchor.type === 'after') anchor.node.insertAdjacentElement('afterend', c.el);
+    else if (anchor.node.parentElement) anchor.node.parentElement.insertBefore(c.el, anchor.node);
+  }
+
   // ---- inject/remove decision; cheap early-return once the control is in place ----
   function sync() {
-    const present = el && el.isConnected;
-    if (!prefs.enabled) { if (present) el.remove(); return; }   // skin disabled → no control
-    if (present) return;                                        // already in place → zero further work
-    const cell = findAnchorCell();                              // only reached when our control is missing
-    if (!cell) return;                                          // header gone / other view → fail-safe
-    injectStyle();
-    if (!el) build();
-    reflect();
-    cell.insertAdjacentElement('afterend', el);
+    if (!prefs.enabled) { removeControls(); return; }           // skin disabled → no controls
+    if (!controls.home || !controls.home.el.isConnected) {
+      const cell = findHomeAnchorCell();                        // only reached when the Home control is missing
+      if (cell) insertControl('home', { type: 'after', node: cell });
+    }
+    if (!controls.sidebar || !controls.sidebar.el.isConnected) {
+      const anchor = findDmAnchor();                            // only reached when the sidebar control is missing
+      if (anchor) insertControl('sidebar', anchor);
+    }
   }
 
   // ---- scheduling: O(1) observer → dirty flag → throttled idle pass ----
