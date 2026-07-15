@@ -92,7 +92,7 @@ test('themeVarsCSS renders a scoped var block per mode with no undefined', () =>
 
 test('sidebar conversation rows use muted read text and full-contrast unread text', () => {
   assert.match(css,
-    /\[data-slackify="rail"\] \[role="listitem"\]\[data-group-id\]:where\(:not\(\[data-sf-unread\]\)\) \*:not\(img\):not\(image\)\s*\{[\s\S]*?color: var\(--sf-side-read-text\) !important;/,
+    /\[data-slackify="rail"\] \[role="listitem"\]\[data-sf-read\] \*:not\(img\):not\(image\)\s*\{[\s\S]*?color: var\(--sf-side-read-text\) !important;/,
     'read descendants should get muted read color');
   assert.match(css,
     /\[data-slackify="rail"\] \[role="listitem"\]\[data-sf-unread\] \*:not\(img\):not\(image\)\s*\{[\s\S]*?color: var\(--sf-side-unread-text\) !important;[\s\S]*?font-weight: 700 !important;/,
@@ -133,7 +133,9 @@ test('selfslack feature + selfRow tag + selfAvatar selector are wired', () => {
 });
 
 test('sidebar unread row tag is wired separately from data-slackify active state', () => {
+  assert.ok(C.TAGS.readConv && C.TAGS.readConv.includes('data-sf-read'), 'read sidebar row tag missing');
   assert.ok(C.TAGS.unreadConv && C.TAGS.unreadConv.includes('data-sf-unread'), 'unread sidebar row tag missing');
+  assert.ok(css.includes('[data-sf-read]'), 'generated CSS should use the tagger-owned read row attr');
   assert.ok(css.includes('[data-sf-unread]'), 'generated CSS should use the tagger-owned unread row attr');
 });
 

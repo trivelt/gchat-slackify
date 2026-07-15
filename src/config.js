@@ -157,6 +157,7 @@
     meetingConv: '[role="listitem"][data-sf-meeting]',
     // Sidebar conversation row that tagger.js has classified as unread. Kept separate from
     // data-slackify because rows may already use data-slackify="active".
+    readConv:    '[role="listitem"][data-sf-read]',
     unreadConv:  '[role="listitem"][data-sf-unread]',
     // The per-message column GChat right-aligns for YOUR own messages (highest flex-end ancestor of
     // a colored self-bubble). tagger.js tags it so the "Slack-style own messages" feature can flip

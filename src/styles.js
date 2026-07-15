@@ -148,7 +148,7 @@
     // ===== READ / UNREAD CONVERSATIONS (scoped to the rail so message-area text is never touched) =====
     // Slack differentiates read vs unread sidebar items by BOTH weight and color. Keep section
     // headings on the normal sidebar ink, but mute actual read conversation rows.
-    const readRailRows = SEL.convRow.map((s) => `${TAG.rail} ${s}:where(:not([data-sf-unread]))`);
+    const readRailRows = [`${TAG.rail} ${TAG.readConv}`];
     const unreadRailRows = [`${TAG.rail} ${TAG.unreadConv}`];
     parts.push(mk('unreadbold', readRailRows, '', { color: 'var(--sf-side-read-text)' }));
     parts.push(mk('unreadbold', readRailRows, ' *:not(img):not(image)', { color: 'var(--sf-side-read-text)' }));

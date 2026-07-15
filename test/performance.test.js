@@ -74,7 +74,9 @@ test('tagger caches expensive scans (WeakSet) incl. processed topics', () => {
 
 test('tagger classifies sidebar unread rows with an owned row attribute', () => {
   assert.match(taggerSrc, /scanSidebarUnreadRows/);
+  assert.match(taggerSrc, /data-sf-read/);
   assert.match(taggerSrc, /data-sf-unread/);
+  assert.match(taggerSrc, /sidebarConversationRows/);
   assert.match(taggerSrc, /hasNativeBoldText/);
 });
 

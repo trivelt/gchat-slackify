@@ -100,13 +100,23 @@
     }
     return false;
   }
+  function sidebarConversationRows(rail) {
+    if (!rail) return [];
+    const rows = new Set(Array.from(rail.querySelectorAll(C.sel('convRow'))));
+    const list = C.firstMatchEl('dmList', rail);
+    if (list) for (const row of list.querySelectorAll('[role="listitem"]')) rows.add(row);
+    return Array.from(rows);
+  }
   function scanSidebarUnreadRows(rail) {
     if (!rail) return;
-    const rows = Array.from(rail.querySelectorAll(C.sel('convRow')));
+    const rows = sidebarConversationRows(rail);
     if (!rows.length) return;
     // Clear our own previous state before reading native font weight, otherwise our CSS would make a
     // formerly-unread row look bold forever after it is read.
-    for (const row of rows) row.removeAttribute('data-sf-unread');
+    for (const row of rows) {
+      row.removeAttribute('data-sf-read');
+      row.removeAttribute('data-sf-unread');
+    }
     const unread = [];
     for (const row of rows) {
       let isUnread = attrSaysUnread(row);
@@ -118,7 +128,7 @@
       if (!isUnread) isUnread = hasNativeBoldText(row);
       if (isUnread) unread.push(row);
     }
-    for (const row of unread) row.setAttribute('data-sf-unread', '');
+    for (const row of rows) row.setAttribute(unread.includes(row) ? 'data-sf-unread' : 'data-sf-read', '');
   }
 
   // ---- meeting/calendar conversations in the Direct messages list ----
