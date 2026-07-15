@@ -82,6 +82,8 @@ test('tagger classifies sidebar meeting rows with an owned row attribute', () =>
   assert.match(taggerSrc, /scanSidebarMeetingRows/);
   assert.match(taggerSrc, /data-sf-meeting/);
   assert.match(taggerSrc, /rowTitleLooksLikeMeeting/);
+  assert.match(taggerSrc, /numericMonthDate/);
+  assert.match(taggerSrc, /rowHasCalendarIcon/);
 });
 
 test('MutationObserver callback is O(1) — flag + schedule, no inline DOM work', () => {

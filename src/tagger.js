@@ -124,8 +124,9 @@
   // ---- meeting/calendar conversations in the Direct messages list ----
   // Home feed meeting rows expose data-group-type="10"; Direct-message sidebar rows do not. Meeting
   // conversations do, however, carry a calendar/meeting affordance in current Chat builds, and their
-  // row titles commonly include the event date ("Quick Sync - Jul 15"). Tag only rows under the DM
-  // list so the dedicated sidebar "Meetings" section remains visible even when hidden from DMs.
+  // row titles commonly include the event date ("Quick Sync - Jul 15" or "Engineering Review - M07 9").
+  // Tag only rows under the DM list so the dedicated sidebar "Meetings" section remains visible even
+  // when hidden from DMs.
   const meetingAttrSel = [
     '[data-group-type="10"]',
     '[data-meeting]',
@@ -142,6 +143,8 @@
     '[data-tooltip*="event" i]',
   ].join(',');
   const monthDate = /\s[-–—]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}\b/i;
+  const numericMonthDate = /\s[-–—]\s*M(?:0?[1-9]|1[0-2])\s+(?:[1-9]|[12]\d|3[01])\b/i;
+  const calendarIconText = /^(?:calendar_today|calendar_month|calendar_add_on|event|event_available|event_note|today)$/i;
   function attrSaysMeeting(el) {
     if (!el || !el.attributes) return false;
     for (const a of el.attributes) {
@@ -156,7 +159,15 @@
   }
   function rowTitleLooksLikeMeeting(row) {
     const t = (row.textContent || '').replace(/\s+/g, ' ').trim();
-    return monthDate.test(t);
+    return monthDate.test(t) || numericMonthDate.test(t);
+  }
+  function rowHasCalendarIcon(row) {
+    const icons = row.querySelectorAll('[aria-hidden="true"], .material-icons, .material-symbols-outlined, .material-symbols-rounded, .material-symbols-sharp');
+    for (const icon of icons) {
+      const t = (icon.textContent || '').replace(/\s+/g, ' ').trim();
+      if (calendarIconText.test(t)) return true;
+    }
+    return false;
   }
   function scanSidebarMeetingRows(rail) {
     if (!rail) return;
@@ -167,7 +178,7 @@
     for (const row of rows) row.removeAttribute('data-sf-meeting');
     const meetings = [];
     for (const row of rows) {
-      let isMeeting = attrSaysMeeting(row) || rowTitleLooksLikeMeeting(row);
+      let isMeeting = attrSaysMeeting(row) || rowTitleLooksLikeMeeting(row) || rowHasCalendarIcon(row);
       if (!isMeeting) {
         for (const el of row.querySelectorAll(meetingAttrSel)) {
           if (attrSaysMeeting(el)) { isMeeting = true; break; }
