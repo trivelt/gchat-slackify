@@ -72,6 +72,12 @@ test('tagger caches expensive scans (WeakSet) incl. processed topics', () => {
   assert.match(taggerSrc, /processedTopics/);
 });
 
+test('tagger classifies sidebar unread rows with an owned row attribute', () => {
+  assert.match(taggerSrc, /scanSidebarUnreadRows/);
+  assert.match(taggerSrc, /data-sf-unread/);
+  assert.match(taggerSrc, /hasNativeBoldText/);
+});
+
 test('MutationObserver callback is O(1) — flag + schedule, no inline DOM work', () => {
   const start = taggerSrc.indexOf('new MutationObserver');
   const end = taggerSrc.indexOf('.observe(', start);

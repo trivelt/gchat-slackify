@@ -28,7 +28,7 @@ test('THEMES exposes the expected set with both modes', () => {
     assert.ok(t.modes.light && t.modes.dark, `${t.id} must define light + dark`);
     for (const mode of ['light', 'dark']) {
       const m = t.modes[mode];
-      for (const key of ['bg', 'active', 'text', 'activeText', 'topBg', 'topText', 'hoverOverlay']) {
+      for (const key of ['bg', 'active', 'text', 'activeText', 'readText', 'unreadText', 'topBg', 'topText', 'hoverOverlay']) {
         assert.ok(m[key], `${t.id}.${mode}.${key} must be set`);
       }
     }
@@ -40,8 +40,11 @@ test('sampled aubergine palette resolves to its verified hex (no drift)', () => 
   assert.strictEqual(a.modes.light.bg, '#F0E9F0');
   assert.strictEqual(a.modes.light.active, '#611F69');
   assert.strictEqual(a.modes.light.activeText, '#FFFFFF');
+  assert.strictEqual(a.modes.light.unreadText, '#1D1C1D');
   assert.strictEqual(a.modes.dark.bg, '#241229');
   assert.strictEqual(a.modes.dark.active, '#7D3986');
+  assert.strictEqual(a.modes.dark.readText, '#B9A7BD');
+  assert.strictEqual(a.modes.dark.unreadText, '#FFFFFF');
 });
 
 test('derived theme computes a pale light sidebar + dark sidebar from the identity hex', () => {
@@ -61,7 +64,7 @@ test('buildCustomTheme applies the three picked colors AS-IS to both modes', () 
     assert.strictEqual(t.modes[mode].active, '#611F69', `${mode} active = user accent`);
     assert.strictEqual(t.modes[mode].topBg, '#3D1042', `${mode} top bar = user pick`);
     // every consumed key is populated (no undefined leaks into the CSS)
-    for (const key of ['bg', 'active', 'text', 'activeText', 'topBg', 'topText', 'hoverOverlay', 'presence', 'mention']) {
+    for (const key of ['bg', 'active', 'text', 'activeText', 'readText', 'unreadText', 'topBg', 'topText', 'hoverOverlay', 'presence', 'mention']) {
       assert.ok(t.modes[mode][key], `${mode}.${key} must be set`);
     }
   }
@@ -82,7 +85,24 @@ test('themeVarsCSS renders a scoped var block per mode with no undefined', () =>
   assert.ok(out.includes('[data-sf-theme="cst-9"][data-sf-mode="light"]'), 'light block');
   assert.ok(out.includes('[data-sf-theme="cst-9"][data-sf-mode="dark"]'), 'dark block');
   assert.ok(out.includes('--sf-side-bg:') && out.includes('--sf-top-bg:'), 'sidebar + top vars emitted');
+  assert.ok(out.includes('--sf-side-read-text:'), 'read sidebar row text var emitted');
+  assert.ok(out.includes('--sf-side-unread-text:'), 'unread sidebar text var emitted');
   assert.ok(!out.includes('undefined'), 'no undefined leaked');
+});
+
+test('sidebar conversation rows use muted read text and full-contrast unread text', () => {
+  assert.match(css,
+    /\[data-slackify="rail"\] \[role="listitem"\]\[data-group-id\]:where\(:not\(\[data-sf-unread\]\)\) \*:not\(img\):not\(image\)\s*\{[\s\S]*?color: var\(--sf-side-read-text\) !important;/,
+    'read descendants should get muted read color');
+  assert.match(css,
+    /\[data-slackify="rail"\] \[role="listitem"\]\[data-sf-unread\] \*:not\(img\):not\(image\)\s*\{[\s\S]*?color: var\(--sf-side-unread-text\) !important;[\s\S]*?font-weight: 700 !important;/,
+    'unread descendants should get full-contrast color + bold weight');
+  assert.match(css,
+    /\[data-slackify="rail"\] \[role="listitem"\]\[data-sf-unread\] svg\s*\{[\s\S]*?fill: var\(--sf-side-unread-text\) !important;/,
+    'unread svg icons should use the unread sidebar ink');
+  assert.match(css,
+    /\[data-slackify="rail"\] \[role="listitem"\]\[data-slackify="active"\]\[role="listitem"\]\[data-slackify="active"\] svg\s*\{[\s\S]*?fill: var\(--sf-side-active-text\) !important;/,
+    'active rows should keep active-item icon contrast when active + unread overlap');
 });
 
 test('newCustomTheme mints a CSS-safe, collision-free id', () => {
@@ -110,6 +130,11 @@ test('selfslack feature + selfRow tag + selfAvatar selector are wired', () => {
   assert.ok(C.FEATURES.some((f) => f.id === 'selfslack'), 'selfslack feature missing');
   assert.ok(C.TAGS.selfRow.includes('self-row'), 'selfRow tag missing');
   assert.ok(Array.isArray(C.SELECTORS.selfAvatar) && C.SELECTORS.selfAvatar.length >= 2, 'selfAvatar needs a fallback chain');
+});
+
+test('sidebar unread row tag is wired separately from data-slackify active state', () => {
+  assert.ok(C.TAGS.unreadConv && C.TAGS.unreadConv.includes('data-sf-unread'), 'unread sidebar row tag missing');
+  assert.ok(css.includes('[data-sf-unread]'), 'generated CSS should use the tagger-owned unread row attr');
 });
 
 test('selfslack timestamp/grouping is wired: self-meta tag, durable timestamp hook, generated rules', () => {

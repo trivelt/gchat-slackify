@@ -145,14 +145,25 @@
     // bg-colored <div>, not an svg) keeps its own color.
     parts.push(mk('topbar', [TAG.statusChip], '', { 'background-color': 'rgba(255,255,255,0.16)' }));
 
-    // ===== ACTIVE CONVERSATION (after sidebar so it wins) =====
-    parts.push(mk('activeconv', [TAG.active], '', { 'background-color': 'var(--sf-side-active-bg)', 'border-radius': '6px' }));
-    parts.push(mk('activeconv', [TAG.active], ' *:not(img)', { color: 'var(--sf-side-active-text)' }));
-    // keep the selected item's theme color on hover (Slack behaviour) — beats the rail *:hover reset
-    parts.push(mk('activeconv', [`${TAG.active}:hover`], '', { 'background-color': 'var(--sf-side-active-bg)' }));
+    // ===== READ / UNREAD CONVERSATIONS (scoped to the rail so message-area text is never touched) =====
+    // Slack differentiates read vs unread sidebar items by BOTH weight and color. Keep section
+    // headings on the normal sidebar ink, but mute actual read conversation rows.
+    const readRailRows = SEL.convRow.map((s) => `${TAG.rail} ${s}:where(:not([data-sf-unread]))`);
+    const unreadRailRows = [`${TAG.rail} ${TAG.unreadConv}`];
+    parts.push(mk('unreadbold', readRailRows, '', { color: 'var(--sf-side-read-text)' }));
+    parts.push(mk('unreadbold', readRailRows, ' *:not(img):not(image)', { color: 'var(--sf-side-read-text)' }));
+    parts.push(mk('unreadbold', readRailRows, ' svg', { fill: 'var(--sf-side-read-text)' }));
+    parts.push(mk('unreadbold', unreadRailRows, '', { color: 'var(--sf-side-unread-text)', 'font-weight': '700' }));
+    parts.push(mk('unreadbold', unreadRailRows, ' *:not(img):not(image)', { color: 'var(--sf-side-unread-text)', 'font-weight': '700' }));
+    parts.push(mk('unreadbold', unreadRailRows, ' svg', { fill: 'var(--sf-side-unread-text)' }));
 
-    // ===== UNREAD (scoped to the rail so message-area text is never re-weighted) =====
-    parts.push(mk('unreadbold', SEL.unreadRow.map((s) => `${TAG.rail} ${s}`), '', { 'font-weight': '700' }));
+    // ===== ACTIVE CONVERSATION (after unread/sidebar so it wins) =====
+    const activeRailRows = [`${TAG.rail} ${TAG.active}${TAG.active}`];
+    parts.push(mk('activeconv', activeRailRows, '', { 'background-color': 'var(--sf-side-active-bg)', 'border-radius': '6px' }));
+    parts.push(mk('activeconv', activeRailRows, ' *:not(img)', { color: 'var(--sf-side-active-text)' }));
+    parts.push(mk('activeconv', activeRailRows, ' svg', { fill: 'var(--sf-side-active-text)' }));
+    // keep the selected item's theme color on hover (Slack behaviour) — beats the rail *:hover reset
+    parts.push(mk('activeconv', [`${TAG.rail} ${TAG.active}:hover`], '', { 'background-color': 'var(--sf-side-active-bg)' }));
 
     // ===== MESSAGES: flatten / density / full-width / hover =====
     // flatten: remove ALL background/padding/margin from tagged bubbles so messages appear flat.

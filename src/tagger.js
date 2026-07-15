@@ -66,6 +66,61 @@
     }
   }
 
+  // ---- unread conversation rows; scoped to the rail ----
+  // Google does not consistently put data-is-unread on the sidebar row itself. Sometimes the only
+  // durable signal is an inner data/aria marker; in other variants the native row title is simply
+  // bold. CSS cannot safely climb from those inner signals to the row without :has(), so tag the row
+  // here and let styles.js target our own data-sf-unread attribute.
+  const unreadAttrSel = [
+    '[data-is-unread]',
+    '[data-has-unread]',
+    '[data-unread-count]',
+    '[aria-label*="unread" i]',
+    '[title*="unread" i]',
+    '[data-tooltip*="unread" i]',
+  ].join(',');
+  const falseyReadState = /^(|0|false|read|none)$/i;
+  function attrSaysUnread(el) {
+    if (!el || !el.attributes) return false;
+    for (const a of el.attributes) {
+      const n = a.name.toLowerCase();
+      const v = (a.value || '').trim();
+      const vl = v.toLowerCase();
+      if ((n === 'aria-label' || n === 'title' || n === 'data-tooltip') && /\bunread\b/i.test(v) && !/\bmark as unread\b/i.test(v)) return true;
+      if (n.includes('unread') && !falseyReadState.test(vl)) return true;
+    }
+    return false;
+  }
+  function hasNativeBoldText(row) {
+    for (const el of row.querySelectorAll('span, div, a')) {
+      const t = (el.textContent || '').trim();
+      if (!t || t.length > 120) continue;
+      const fw = getComputedStyle(el).fontWeight;
+      if (fw === 'bold' || (parseFloat(fw) || 0) >= 600) return true;
+    }
+    return false;
+  }
+  function scanSidebarUnreadRows(rail) {
+    if (!rail) return;
+    const rows = Array.from(rail.querySelectorAll(C.sel('convRow')));
+    if (!rows.length) return;
+    // Clear our own previous state before reading native font weight, otherwise our CSS would make a
+    // formerly-unread row look bold forever after it is read.
+    for (const row of rows) row.removeAttribute('data-sf-unread');
+    const unread = [];
+    for (const row of rows) {
+      let isUnread = attrSaysUnread(row);
+      if (!isUnread) {
+        for (const el of row.querySelectorAll(unreadAttrSel)) {
+          if (attrSaysUnread(el)) { isUnread = true; break; }
+        }
+      }
+      if (!isUnread) isUnread = hasNativeBoldText(row);
+      if (isUnread) unread.push(row);
+    }
+    for (const row of unread) row.setAttribute('data-sf-unread', '');
+  }
+
   // ---- conversation header title (Lato/weight for ALL conversations; "#" prefix for spaces) ----
   // The header title sits in a button[aria-haspopup="menu"] near the top, right of the rail (it's
   // NOT inside [role="main"], so the pane typography rule never reaches it). The title is the
@@ -542,6 +597,7 @@
       const pane = C.firstMatchEl('conversationPane');
       const rail = document.querySelector('[data-slackify="rail"]');
       try { tagActiveRow(pane, rail); } catch (e) {}
+      try { scanSidebarUnreadRows(rail); } catch (e) {}
       try { tagSpaceHeader(pane); } catch (e) {}
       try { scanAvatars(rail); } catch (e) {}
       try { scanSpaceNames(rail); } catch (e) {}

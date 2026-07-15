@@ -17,7 +17,7 @@
  *     own theme-picker swatches; the per-mode shades are then DERIVED deterministically from that
  *     identity (mix toward white/black), not hand-guessed.
  *
- * Each theme palette = { bg, active, activeText, text, presence, mention, hoverOverlay }.
+ * Each theme palette = { bg, active, activeText, text, readText, unreadText, presence, mention, hoverOverlay }.
  * topbar reuses bg/text (cohesive with the rail). Light/dark MODES below = message-area accents.
  */
 ;(function () {
@@ -26,6 +26,11 @@
   const toRgb = (h) => { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
   /** Serialize `[r, g, b]` channels to an uppercase `#RRGGBB` string (clamped). @param {number[]} channels @returns {string} */
   const toHex = (channels) => '#' + channels.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('').toUpperCase();
+  /** Mix two hex colors. @param {string} from @param {string} to @param {number} amount 0–1 toward `to` @returns {string} */
+  const mixHex = (from, to, amount) => {
+    const a = toRgb(from), b = toRgb(to);
+    return toHex(a.map((v, i) => v + (b[i] - v) * amount));
+  };
   /** Mix a hex color toward black. @param {string} hex @param {number} amount 0–1 @returns {string} */
   const darken = (hex, amount) => toHex(toRgb(hex).map((v) => v * (1 - amount)));
   /** Mix a hex color toward white. @param {string} hex @param {number} amount 0–1 @returns {string} */
@@ -52,6 +57,8 @@
     const ink = toRgb('#1D1C1D');
     return toHex(toRgb(active).map((v, i) => v + (ink[i] - v) * t));
   };
+  /** @param {string} bg sidebar background @param {string} active active/brand color @param {string} text base sidebar text @returns {string} */
+  const mutedReadText = (bg, active, text) => (luminance(bg) < 140 ? mixHex(active, '#D1D2D3', 0.72) : text);
 
   const PRESENCE = '#2BAC76', MENTION = '#CD2553';
 
@@ -76,6 +83,10 @@
     return {
       bg, active, text,
       activeText: activeText || readableInk(active),
+      readText: mutedReadText(bg, active, text),
+      // Slack keeps unread sidebar items at full-contrast ink (white on dark sidebars, near-black
+      // on pale sidebars) while read conversation rows use `readText`.
+      unreadText: readableInk(bg),
       presence: presence || PRESENCE,
       mention: mention || MENTION,
       hoverOverlay: hoverWash(bg, active),
@@ -206,6 +217,8 @@
     const vars = `html[data-sf-theme="${t.id}"][data-sf-mode="${mode}"]{` +
       `--sf-side-bg:${m.bg};--sf-side-active-bg:${m.active};` +
       `--sf-side-active-text:${m.activeText};--sf-side-text:${m.text};` +
+      `--sf-side-read-text:${m.readText || m.text};` +
+      `--sf-side-unread-text:${m.unreadText || readableInk(m.bg)};` +
       `--sf-top-bg:${m.topBg};--sf-top-text:${m.topText};` +
       `--sf-presence:${m.presence};--sf-mention:${m.mention};` +
       `--sf-side-hover-overlay:${m.hoverOverlay};}`;

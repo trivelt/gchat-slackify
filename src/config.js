@@ -152,6 +152,9 @@
     // from GChat's wavy blue line into Slack's straight red line with the label at the right.
     unreadLine:  '[data-slackify="unread-line"]',
     unreadLabel: '[data-slackify="unread-label"]',
+    // Sidebar conversation row that tagger.js has classified as unread. Kept separate from
+    // data-slackify because rows may already use data-slackify="active".
+    unreadConv:  '[role="listitem"][data-sf-unread]',
     // The per-message column GChat right-aligns for YOUR own messages (highest flex-end ancestor of
     // a colored self-bubble). tagger.js tags it so the "Slack-style own messages" feature can flip
     // it to the left column and drop your avatar into the gutter.

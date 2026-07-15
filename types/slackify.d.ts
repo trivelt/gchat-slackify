@@ -60,6 +60,8 @@ interface SfThemeMode {
   active: string;
   text: string;
   activeText: string;
+  readText: string;
+  unreadText: string;
   presence: string;
   mention: string;
   hoverOverlay: string;
