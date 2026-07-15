@@ -279,10 +279,14 @@
     // (avatar size bump lives in msgalign, scoped to the message area via inMain)
 
     // ===== SENDER NAME PROMINENCE (Slack-style bold, slightly larger author name) =====
-    // GChat's author name wrapper is span[data-name][data-is-message] (durable Google attrs); the
-    // VISIBLE name is a child span that sets its own 12px via a hashed class, so size that child too.
-    parts.push(mk('sendername', SEL.senderName, '', { 'font-weight': '700' }));
-    parts.push(mk('sendername', SEL.senderName, ' span', { 'font-weight': '700', 'font-size': '15px' }));
+    // GChat's author-name wrapper is span[data-name]. People usually carry data-is-message, but
+    // app/bot senders (e.g. GitHub) can use a different wrapper; tagger marks those by looking left
+    // of the timestamp. Size the wrapper and its first child because GChat often puts the visible name
+    // in a child span with a hashed 12px class.
+    const senderNames = SEL.senderName.concat([TAG.senderName]);
+    parts.push(mk('sendername', senderNames, '', { color: 'var(--sf-content-text)', 'font-weight': '700', 'font-size': '15px' }));
+    parts.push(mk('sendername', SEL.senderName, ' > span:first-child', { color: 'var(--sf-content-text)', 'font-weight': '700', 'font-size': '15px' }));
+    parts.push(mk('sendername', [TAG.senderName], ' > span:first-child', { color: 'var(--sf-content-text)', 'font-weight': '700', 'font-size': '15px' }));
 
     // ===== MESSAGE LAYOUT (top-align avatar with the sender name; enlarge it, Slack-style) =====
     // tagger.js tags the wide flex row (avatar | name+content) as [data-slackify="msgrow"] so we

@@ -102,9 +102,11 @@
     mainRow:          ['[role="main"] [role="listitem"]', '[role="main"] [role="row"]'],
     messageContainer: ['[role="main"] [data-message-id]', '[role="main"] [data-is-tombstone-message-view]'],
     messageToolbar:   ['[role="main"] [role="toolbar"]'],
-    // author-name wrapper: span[data-name][data-is-message] (durable Google attrs). The VISIBLE name
-    // is a child span (it sets its own size via a hashed class — styles.js sizes the child too).
-    senderName:       ['[role="main"] span[data-name][data-is-message]'],
+    // author-name wrapper: people usually carry span[data-name][data-is-message], while app/bot
+    // senders (e.g. GitHub) may omit data-is-message. Both are durable Google attrs in the stream.
+    // The VISIBLE name is often a child span with its own hashed size, so styles.js sizes it too.
+    senderName:       ['[role="main"] span[data-name][data-is-message]',
+                       '[role="main"] span[data-name]'],
     // interactive elements within the rail (used for hover theming)
     railInteractive:  ['button', '[role="button"]', '[role="listitem"]', '[jsaction]'],
   };
@@ -128,6 +130,7 @@
     composerPill:'[data-slackify="composer-pill"]',
     msgRow:      '[data-slackify="msgrow"]',
     msgWide:     '[data-slackify-wide]',
+    senderName:  '[data-sf-sender-name]',
     spaceName:   '[data-slackify="spacename"]',
     // The open conversation's header title span (tagged for EVERY conversation so typography can
     // apply Slack's Lato + heavy title weight — the header sits outside [role="main"], so the

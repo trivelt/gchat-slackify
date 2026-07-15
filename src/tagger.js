@@ -460,6 +460,50 @@
     return found;
   }
 
+  const senderSkipText = /^(?:app|bot|edited|modified)$/i;
+  const senderTimeText = /\b(?:mon|tue|wed|thu|fri|sat|sun)\b|\b(?:am|pm)\b|\d{1,2}:\d{2}/i;
+  function senderTextOk(t) {
+    t = (t || '').replace(/\s+/g, ' ').trim();
+    if (!t || t.length > 60) return false;
+    if (senderSkipText.test(t) || senderTimeText.test(t)) return false;
+    return /[\p{L}\p{N}]/u.test(t);
+  }
+  function findSenderHeaderRow(timeEl, topic) {
+    const timeText = (timeEl.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!timeText) return null;
+    let row = timeEl.parentElement;
+    for (let i = 0; i < 6 && row && row !== topic; i++) {
+      const text = (row.textContent || '').replace(/\s+/g, ' ').trim();
+      const r = row.getBoundingClientRect();
+      if (text && text.includes(timeText) && text.length <= 140 && r.height > 0 && r.height <= 36) {
+        const beforeTime = text.slice(0, text.indexOf(timeText))
+          .replace(/\b(?:App|Bot|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/gi, '')
+          .trim();
+        if (senderTextOk(beforeTime)) return row;
+      }
+      row = row.parentElement;
+    }
+    return null;
+  }
+  function findSenderNameNearTime(timeEl, topic) {
+    const row = findSenderHeaderRow(timeEl, topic);
+    if (!row) return null;
+    const tr = timeEl.getBoundingClientRect();
+    let best = null, bestRight = -Infinity;
+    for (const el of row.querySelectorAll('span, div, a')) {
+      if (el === timeEl || el.contains(timeEl) || timeEl.contains(el)) continue;
+      // Prefer the visible text leaf. Styling a wrapper can also enlarge the "App" badge/timestamp.
+      if (el.children.length && !el.hasAttribute('data-name')) continue;
+      const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!senderTextOk(text)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      if (r.left >= tr.left || r.bottom < tr.top - 4 || r.top > tr.bottom + 4) continue;
+      if (r.right > bestRight) { best = el; bestRight = r.right; }
+    }
+    return best;
+  }
+
   // ---- per-topic scan (bubbles + codes + in-topic dates): once per topic, read then write ----
   const processedTopics = new WeakSet();
   // An element we tagged in each topic. If it later disconnects, Wiz RE-RENDERED the topic (e.g. a
@@ -474,7 +518,7 @@
     const nodes = topic.querySelectorAll('div, span');
     if (!nodes.length) { topicIO.observe(topic); return; }   // skeleton not filled yet → retry later
     processedTopics.add(topic);
-    const bubbles = [], dates = [], wides = [], selfRows = [];
+    const bubbles = [], dates = [], wides = [], selfRows = [], senderNames = [];
     for (const el of nodes) {                                 // READ phase
       if (el.hasAttribute('data-slackify')) continue;
       if (el.children.length === 0) {
@@ -525,8 +569,14 @@
         }
       }
     }
+    for (const t of topic.querySelectorAll('[data-absolute-timestamp]')) {
+      if (t.getBoundingClientRect().width <= 0) continue;
+      const name = findSenderNameNearTime(t, topic);
+      if (name) senderNames.push(name);
+    }
     for (const el of dates) tagDate(el);                      // WRITE phase
     for (const el of bubbles) el.setAttribute('data-slackify', 'bubble');
+    for (const el of senderNames) el.setAttribute('data-sf-sender-name', '');
     // Keep only the OUTERMOST self-row per message: a colored sub-element (e.g. a reaction pill) can
     // resolve to a different, NESTED flex-end ancestor, which would otherwise draw a 2nd gutter avatar.
     for (const el of selfRows) {
@@ -557,7 +607,7 @@
     for (const el of avatarWraps) el.setAttribute('data-slackify', 'avatar-wrap');
     for (const el of msgRows) if (!el.hasAttribute('data-slackify')) el.setAttribute('data-slackify', 'msgrow');
     // Remember a stable element so a future pass can detect a Wiz re-render (see topicAnchor above).
-    topicAnchor.set(topic, selfRows[0] || bubbles[0] || topic.firstElementChild);
+    topicAnchor.set(topic, selfRows[0] || bubbles[0] || senderNames[0] || topic.firstElementChild);
   }
 
   // ---- avatar wrappers OUTSIDE the message stream (rail + Home feed) ----

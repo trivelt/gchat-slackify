@@ -156,6 +156,19 @@ test('selfslack timestamp/grouping is wired: self-meta tag, durable timestamp ho
   assert.ok(css.includes('[data-sf-self-notime]'), 'grouped follow-up (notime) rule not generated');
 });
 
+test('sender name styling includes app/bot senders', () => {
+  assert.ok(C.SELECTORS.senderName.some((s) => s === '[role="main"] span[data-name]'), 'senderName should include app/bot sender names');
+  assert.ok(C.TAGS.senderName && C.TAGS.senderName.includes('data-sf-sender-name'), 'tagged sender-name hook missing');
+  assert.ok(css.includes('[role="main"] span[data-name]'), 'generated CSS should include app/bot sender selector');
+  assert.ok(css.includes('[data-sf-sender-name]'), 'generated CSS should include tagged sender selector');
+  assert.match(css,
+    /\[data-sf-sender-name\]\s*\{[\s\S]*?color: var\(--sf-content-text\) !important;[\s\S]*?font-weight: 700 !important;[\s\S]*?font-size: 15px !important;/,
+    'sender-name rule should apply prominent author styling');
+  assert.match(css,
+    /\[role="main"\] span\[data-name\] > span:first-child\s*\{[\s\S]*?font-size: 15px !important;/,
+    'nested visible sender-name spans should also be sized');
+});
+
 // ---------- generated CSS ----------
 test('CSS is generated from config: a block per theme×mode, and a mode block per MODE', () => {
   for (const t of THEMES) {
