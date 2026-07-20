@@ -119,16 +119,17 @@
     parts.push(mk('topbar', SEL.topBar, '', { 'background-color': 'var(--sf-top-bg)' }));
     parts.push(mk('topbar', SEL.topBar, ' *:not(img):not(image)', { color: 'var(--sf-top-text)' }));
     parts.push(mk('topbar', SEL.topBar, ' svg', { fill: 'var(--sf-top-text)' }));
-    // Search: keep it ORIGINAL/native — we do NOT style the search box or its dropdown. We ONLY undo
-    // the [role="banner"] white text/icon rules above (otherwise GChat's native dark search text +
-    // dropdown rows would be whitened to white-on-white on their light native surface). The dropdown
-    // is a descendant of [role="search"], so this restores its native ink too. Mode-aware native ink.
+    // Search: in dark mode, make the top search field read like Slack's purple command/search box.
+    // Keep the RESULTS dropdown native below; it renders outside [role="search"] in the banner.
     // Anchor under [role="banner"] so this re-ink out-specifies the `header[role="banner"] *` white
     // rule above (both !important) — otherwise it loses the specificity tie and the typed search text
     // stays white-on-white in light mode (the input lives inside [role="search"] inside the banner).
     const searchInBanner = SEL.search.map((s) => `${SEL.topBar[0]} ${s}`);
     parts.push(mk('topbar', searchInBanner, ' *:not(img)', { color: 'var(--sf-search-drop-text)' }));
     parts.push(mk('topbar', searchInBanner, ' svg', { fill: 'var(--sf-search-drop-text)' }));
+    const darkSearch = 'html[data-sf-on][data-sf-feat-topbar][data-sf-mode=dark] [role=banner] [role=search]';
+    parts.push(`${darkSearch}{background:#7E5285!important;border:1px solid #9E76A5!important;border-radius:8px!important;}`);
+    parts.push(`${darkSearch} :not([role=listbox],[role=listbox] *){background:transparent!important;}`);
     // The search RESULTS dropdown and the Help/Support [role="menu"] both render in the banner but
     // on native light surfaces, so the banner white-text rule whitens their rows (white-on-white).
     // Restore native ink on both (keeps them native).
@@ -144,6 +145,10 @@
     // its text is whitened by the [role="banner"] * rule above, and the colored presence dot (a
     // bg-colored <div>, not an svg) keeps its own color.
     parts.push(mk('topbar', [TAG.statusChip], '', { 'background-color': 'rgba(255,255,255,0.16)' }));
+
+    // Slack dark content surfaces: the message pane is dark grey, and the composer card is a step up.
+    parts.push('html[data-sf-on][data-sf-mode=dark] :is(body,[role=main],[role=separator],[data-slackify=stream]){background:#1A1D21!important;}');
+    parts.push('html[data-sf-on][data-sf-mode=dark][data-sf-feat-composer] [data-slackify=composer]{background:#222529!important;}');
 
     // ===== READ / UNREAD CONVERSATIONS (scoped to the rail so message-area text is never touched) =====
     // Slack differentiates read vs unread sidebar items by BOTH weight and color. Keep section

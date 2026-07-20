@@ -169,6 +169,26 @@ test('sender name styling includes app/bot senders', () => {
     'nested visible sender-name spans should also be sized');
 });
 
+test('dark top search field uses Slack-like purple styling', () => {
+  assert.ok(css.includes('html[data-sf-on][data-sf-feat-topbar][data-sf-mode=dark] [role=banner] [role=search]'),
+    'top search styling should be scoped to topbar + dark mode');
+  assert.match(css,
+    /html\[data-sf-on\]\[data-sf-feat-topbar\]\[data-sf-mode=dark\] \[role=banner\] \[role=search\]\{background:#7E5285!important;[\s\S]*?border-radius:8px!important;/,
+    'dark search field should use the Slack-like purple surface');
+  assert.match(css,
+    /html\[data-sf-on\]\[data-sf-feat-topbar\]\[data-sf-mode=dark\] \[role=banner\] \[role=search\] :not\(\[role=listbox\],\[role=listbox\] \*\)\{background:transparent!important;/,
+    'inactive Gemini/search wrappers should not keep black backgrounds');
+  assert.ok(!css.includes('[role=search] [role=listbox]{'), 'expanded search results should stay native');
+  assert.ok(!css.includes('[role=search] *:not(img):not(button)'), 'search dropdown descendants should not be globally flattened');
+});
+
+test('dark conversation and composer surfaces match Slack', () => {
+  assert.ok(css.includes('html[data-sf-on][data-sf-mode=dark] :is(body,[role=main],[role=separator],[data-slackify=stream]){background:#1A1D21!important;}'),
+    'dark app gutters and conversation pane should use Slack-like dark grey');
+  assert.ok(css.includes('html[data-sf-on][data-sf-mode=dark][data-sf-feat-composer] [data-slackify=composer]{background:#222529!important;}'),
+    'dark composer should be a lighter Slack-like surface');
+});
+
 // ---------- generated CSS ----------
 test('CSS is generated from config: a block per theme×mode, and a mode block per MODE', () => {
   for (const t of THEMES) {
